@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Local EVM execution node
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    container_name: settlement_anvil
+    command: ["anvil", "--host", "0.0.0.0"]
+    ports:
+      - "8545:8545"
+
+  # Express REST API & Swagger UI
+  api:
+    build: ./web3-middleware-lab
+    container_name: settlement_api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - RPC_URL=http://anvil:8545
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - anvil
+
+  # Event Indexing Daemon
+  indexer:
+    build: ./web3-middleware-lab
+    container_name: settlement_indexer
+    restart: always
+    command: ["npx", "tsx", "src/indexer.ts"]
+    environment:
+      - RPC_URL=http://anvil:8545
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - anvil
